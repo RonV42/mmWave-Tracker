@@ -1,3 +1,50 @@
+"""
+Hubitat mmWave Live Viewer
+--------------------------
+
+A lightweight Flask + SocketIO web app to visualize live mmWave sensor data from Hubitat devices
+(via the Maker API). Displays target positions in real time, trail history, occupancy status, and
+lux/illuminance values.
+
+Features:
+- Live Plotly chart of targets with IDs
+- Trail history (adjustable length)
+- Table of target X/Y/Z coordinates + Doppler
+- Occupancy and lux indicators
+- Device selection from Maker API
+- Automatic heartbeat updates
+
+Requirements:
+- Python 3.12+
+- Flask
+- Flask-SocketIO
+- Requests
+- Plotly (frontend via CDN)
+- Docker (optional, for containerized deployment)
+
+Configuration:
+- Environment variables (can be set via `.env` file):
+    HUBITAT_HOST      : Hubitat IP or hostname
+    MAKERAPI_APP_ID   : Maker API App ID
+    MAKERAPI_TOKEN    : Maker API Access Token
+    POLL_HZ           : Polling frequency in Hz (default: 10)
+
+Usage:
+- Run locally: `python app.py`
+- Or via Docker Compose: `docker compose up --build`
+- Access in browser: http://localhost:5000
+
+License:
+- GNU General Public License v3.0 (GPL-3.0)
+- This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+Author: lnjustin, nickduvall921
+Date:   2026-01-30
+"""
+
 import os
 import json
 import time
