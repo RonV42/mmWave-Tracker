@@ -41,12 +41,15 @@
     </div>
   </div>
 
-  <div class="status">
+    <div class="status">
     <div>Status: <span id="statusText">Connecting...</span></div>
     <div>Device: <span id="deviceLabel">--</span></div>
     <div>Targets: <span id="targetCount">--</span></div>
+    <div>Occupancy: <span id="occupancy">--</span></div>
+    <div>Lux: <span id="lux">--</span></div>
     <div>Last: <span id="lastTs">--:--:--</span></div>
-  </div>
+    </div>
+
 
   <div class="main">
     <div id="chart"></div>
@@ -79,6 +82,10 @@
   const tbody = document.getElementById("tbody");
   const deviceSelect = document.getElementById("deviceSelect");
   const refreshBtn = document.getElementById("refreshBtn");
+
+  const occupancyEl = document.getElementById("occupancy");
+  const luxEl = document.getElementById("lux");
+
 
   const trailLenSlider = document.getElementById("trailLen");
   const trailLenVal = document.getElementById("trailLenVal");
@@ -170,10 +177,27 @@
     deviceLabelEl.innerText = payload.deviceLabel || payload.deviceId;
     lastTsEl.innerText = fmtTime(payload.ts_client);
 
+    // --- occupancy & lux ---
+    const attrs = payload.attributes || {};
+    if (attrs.motion !== undefined) {
+        const occ = attrs.motion.toLowerCase() === "active" ? "occupied" : "unoccupied";
+        occupancyEl.innerText = occ;
+        occupancyEl.style.color = occ === "occupied" ? "#4caf50" : "#f44336"; // green/red
+    } else {
+        occupancyEl.innerText = "--";
+        occupancyEl.style.color = "#aaa";
+    }
+
+    if (attrs.lux !== undefined) {
+        luxEl.innerText = attrs.lux;
+    } else {
+        luxEl.innerText = "--";
+    }
+
     if (!parsed || !parsed.targets) {
-      statusText.innerText = "No targetInfo / invalid JSON";
-      targetCountEl.innerText = payload.targetCount ?? "--";
-      return;
+        statusText.innerText = "No targetInfo / invalid JSON";
+        targetCountEl.innerText = payload.targetCount ?? "--";
+        return;
     }
 
     statusText.innerText = "OK";

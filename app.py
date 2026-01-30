@@ -126,7 +126,15 @@ def poll_loop():
             target_info_raw = attrs.get("targetInfo")
             target_count = attrs.get("targetCount")
 
-            print(f"[poll_loop] polling device {current_device_id} targetInfo={target_info_raw}")
+            # ----- New: occupancy and lux -----
+            motion = attrs.get("motion")  # Hubitat standard attribute
+            occupancy = None
+            if motion is not None:
+                occupancy = "occupied" if motion.lower() == "active" else "unoccupied"
+
+            lux_raw = attrs.get("illuminance") or attrs.get("lux")
+            lux = float(lux_raw) if lux_raw is not None else None
+            # ----------------------------------
 
             now = time.time()
             changed = target_info_raw != last_targetinfo_raw
@@ -144,6 +152,8 @@ def poll_loop():
                     "targetCount": target_count,
                     "raw": target_info_raw,
                     "parsed": parsed,
+                    "occupancy": occupancy,  # ✅ new field
+                    "lux": lux,              # ✅ new field
                     "ts_client": int(now * 1000),
                 })
 
@@ -153,7 +163,6 @@ def poll_loop():
             socketio.emit("backend_error", {"error": str(e)})
 
         time.sleep(interval)
-
 
 @app.route("/")
 def index():
