@@ -84,5 +84,5 @@ Access Token
 
 Paste them into .env  
 
-Ported to hubitat with permission from
+Developed (with permission) based on
 https://github.com/nickduvall921/mmwave_vis/tree/main/mmwave_vis
