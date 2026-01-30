@@ -152,8 +152,8 @@ def poll_loop():
                     "targetCount": target_count,
                     "raw": target_info_raw,
                     "parsed": parsed,
-                    "occupancy": occupancy,  # ✅ new field
-                    "lux": lux,              # ✅ new field
+                    "occupancy": occupancy,
+                    "lux": lux,
                     "ts_client": int(now * 1000),
                 })
 

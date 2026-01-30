@@ -179,10 +179,9 @@
 
     // --- occupancy & lux ---
     const attrs = payload.attributes || {};
-    if (attrs.motion !== undefined) {
-        const occ = attrs.motion.toLowerCase() === "active" ? "occupied" : "unoccupied";
-        occupancyEl.innerText = occ;
-        occupancyEl.style.color = occ === "occupied" ? "#4caf50" : "#f44336"; // green/red
+    if (attrs.occupancy !== undefined) {
+        occupancyEl.innerText = attrs.occupancy;
+        occupancyEl.style.color = attrs.occupancy === "occupied" ? "#4caf50" : "#f44336"; // green/red
     } else {
         occupancyEl.innerText = "--";
         occupancyEl.style.color = "#aaa";
@@ -233,7 +232,7 @@
         text: targets.map(t => `ID:${t.id}`),
         mode: "markers+text",
         textposition: "top center",
-        marker: { size: sizes },
+        marker: { size: sizes }, 
         type: "scatter"
       },
       {
