@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hubitat mmWave Live</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    body { font-family: Segoe UI, sans-serif; background: #1a1a1a; color: #eee; margin: 0; height: 100vh; overflow: hidden; }
+    .header { background: #2b2b2b; padding: 10px 15px; border-bottom: 2px solid #00bcd4; display:flex; justify-content:space-between; align-items:center; gap: 12px; flex-wrap: wrap; }
+    .header h2 { margin:0; color:#00bcd4; }
+    select { background:#333; color:#fff; border:1px solid #00bcd4; padding:6px 10px; border-radius:4px; }
+    .status { background: #222; padding: 6px 15px; color: #aaa; display: flex; gap: 12px; flex-wrap: wrap; }
+    .main { padding: 12px; display: flex; flex-direction: column; gap: 12px; height: calc(100vh - 92px); }
+    #chart { width: 100%; height: 55vh; min-height: 420px; }
+    .controls { display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
+    .controls label { font-size: 0.9em; color: #ccc; }
+    input[type="range"] { width: 200px; }
+
+    .table-container { background: #2b2b2b; border-radius: 8px; overflow-x: auto; flex: 1; }
+    table { width: 100%; border-collapse: collapse; min-width: 500px; text-align: center; }
+    th { background: #00bcd4; color: #111; padding: 8px; }
+    td { padding: 8px; border-bottom: 1px solid #444; }
+    .no-data { color: #888; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
+      <h2>Hubitat mmWave Live</h2>
+      <select id="deviceSelect">
+        <option value="" disabled selected>Loading devices...</option>
+      </select>
+      <button id="refreshBtn" style="background:#444;color:#fff;border:1px solid #00bcd4;padding:6px 10px;border-radius:4px;cursor:pointer;">↻ Refresh</button>
+    </div>
+
+    <div class="controls">
+      <label>Trail Length:
+        <input id="trailLen" type="range" min="1" max="50" value="15">
+        <span id="trailLenVal">15</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="status">
+    <div>Status: <span id="statusText">Connecting...</span></div>
+    <div>Device: <span id="deviceLabel">--</span></div>
+    <div>Targets: <span id="targetCount">--</span></div>
+    <div>Last: <span id="lastTs">--:--:--</span></div>
+  </div>
+
+  <div class="main">
+    <div id="chart"></div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Target ID</th>
+            <th>X</th>
+            <th>Y</th>
+            <th>Z</th>
+            <th>Doppler</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="5" class="no-data">Waiting for data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  const socket = io();
+
+  const statusText = document.getElementById("statusText");
+  const deviceLabelEl = document.getElementById("deviceLabel");
+  const targetCountEl = document.getElementById("targetCount");
+  const lastTsEl = document.getElementById("lastTs");
+  const tbody = document.getElementById("tbody");
+  const deviceSelect = document.getElementById("deviceSelect");
+  const refreshBtn = document.getElementById("refreshBtn");
+
+  const trailLenSlider = document.getElementById("trailLen");
+  const trailLenVal = document.getElementById("trailLenVal");
+
+  let HISTORY_LENGTH = parseInt(trailLenSlider.value, 10);
+  trailLenSlider.addEventListener("input", () => {
+    HISTORY_LENGTH = parseInt(trailLenSlider.value, 10);
+    trailLenVal.innerText = HISTORY_LENGTH;
+  });
+
+  function fmtTime(ms) {
+    const d = new Date(ms);
+    return d.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })
+      + "." + d.getMilliseconds().toString().padStart(3,'0');
+  }
+
+  // targetHistory: id -> [{x,y}, ...]
+  let targetHistory = {};
+
+  const layout = {
+    paper_bgcolor: '#1a1a1a', plot_bgcolor: '#1a1a1a',
+    xaxis: { range: [-450, 450], title: 'Width (cm)', gridcolor: '#333', zerolinecolor: '#666', fixedrange: true },
+    yaxis: { range: [-100, 650], title: 'Depth (cm)', gridcolor: '#333', zerolinecolor: '#666', fixedrange: true },
+    margin: { t: 10, b: 40, l: 40, r: 40 }, font: { color: '#eee' }, showlegend: false
+  };
+
+  Plotly.newPlot('chart', [
+    { x: [], y: [], mode: 'markers+text', text: [], textposition: 'top center', type: 'scatter' },
+    { x: [], y: [], mode: 'lines', opacity: 0.35, type: 'scatter' }
+  ], layout, {displaylogo:false});
+
+  function resetUiForDeviceChange() {
+    targetHistory = {};
+    Plotly.react("chart", [
+      {x:[], y:[], text:[], mode:'markers+text', type:'scatter'},
+      {x:[], y:[], mode:'lines', opacity:0.35, type:'scatter'}
+    ], layout);
+
+    tbody.innerHTML = `<tr><td colspan="5" class="no-data">Waiting for targets...</td></tr>`;
+    targetCountEl.innerText = "--";
+  }
+
+  // ---------------------------
+  // Socket events
+  // ---------------------------
+  socket.on("connect", () => {
+    statusText.innerText = "Connected";
+    socket.emit("request_devices");
+  });
+
+  socket.on("backend_error", (msg) => {
+    statusText.innerText = "Backend error: " + msg.error;
+  });
+
+  refreshBtn.addEventListener("click", () => socket.emit("request_devices"));
+
+  socket.on("device_list", (devices) => {
+    const current = deviceSelect.value;
+    deviceSelect.innerHTML = `<option value="" disabled>Select a Hubitat device</option>`;
+
+    devices.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d.id;
+      opt.textContent = d.label + ` (${d.id})`;
+      deviceSelect.appendChild(opt);
+    });
+
+    if (current) deviceSelect.value = current;
+
+    // Auto-select first if nothing selected
+    if (!deviceSelect.value && devices.length > 0) {
+      deviceSelect.value = devices[0].id;
+      socket.emit("change_device", devices[0].id);
+      resetUiForDeviceChange();
+    }
+  });
+
+  deviceSelect.addEventListener("change", () => {
+    socket.emit("change_device", deviceSelect.value);
+    resetUiForDeviceChange();
+  });
+
+  socket.on("device_changed", (msg) => {
+    statusText.innerText = "Monitoring device " + msg.deviceId;
+  });
+
+  socket.on("mmwave_update", (payload) => {
+    const parsed = payload.parsed;
+    deviceLabelEl.innerText = payload.deviceLabel || payload.deviceId;
+    lastTsEl.innerText = fmtTime(payload.ts_client);
+
+    if (!parsed || !parsed.targets) {
+      statusText.innerText = "No targetInfo / invalid JSON";
+      targetCountEl.innerText = payload.targetCount ?? "--";
+      return;
+    }
+
+    statusText.innerText = "OK";
+    const targets = parsed.targets || [];
+    targetCountEl.innerText = parsed.count ?? payload.targetCount ?? targets.length;
+
+    // Maintain history by target id
+    const currentIds = new Set(targets.map(t => t.id));
+    Object.keys(targetHistory).forEach(id => {
+      if (!currentIds.has(Number(id))) delete targetHistory[id];
+    });
+
+    targets.forEach(t => {
+      if (t.id === undefined || t.id === null) return;
+      if (!targetHistory[t.id]) targetHistory[t.id] = [];
+      targetHistory[t.id].push({x: t.x, y: t.y});
+      if (targetHistory[t.id].length > HISTORY_LENGTH) targetHistory[t.id].shift();
+    });
+
+    // Flatten history into line segments separated by nulls
+    let historyX = [], historyY = [];
+    Object.values(targetHistory).forEach(points => {
+      points.forEach(p => { historyX.push(p.x); historyY.push(p.y); });
+      historyX.push(null); historyY.push(null);
+    });
+
+    const sizes = targets.map(t => Math.max(8, Math.min(40, 10 + ((t.z || 0) / 5))));
+
+    Plotly.react("chart", [
+      {
+        x: targets.map(t => t.x),
+        y: targets.map(t => t.y),
+        text: targets.map(t => `ID:${t.id}`),
+        mode: "markers+text",
+        textposition: "top center",
+        marker: { size: sizes },
+        type: "scatter"
+      },
+      {
+        x: historyX,
+        y: historyY,
+        mode: "lines",
+        opacity: 0.35,
+        type: "scatter"
+      }
+    ], layout);
+
+    // Table
+    if (targets.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="no-data">No targets detected</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = "";
+    targets.forEach(t => {
+      tbody.innerHTML += `
+        <tr>
+          <td style="font-weight:bold;color:#00bcd4;">${t.id ?? ""}</td>
+          <td>${t.x ?? ""}</td>
+          <td>${t.y ?? ""}</td>
+          <td>${t.z ?? ""}</td>
+          <td>${t.dop ?? ""}</td>
+        </tr>`;
+    });
+  });
+</script>
+</body>
+</html>
