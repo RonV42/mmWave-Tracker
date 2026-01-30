@@ -178,10 +178,19 @@
     lastTsEl.innerText = fmtTime(payload.ts_client);
 
     // --- occupancy & lux ---
-    occupancyEl.innerText = payload.occupancy;
-    occupancyEl.style.color = payload.occupancy === "occupied" ? "#4caf50" : "#f44336";
+    if (payload.occupancy !== undefined && payload.occupancy !== null) {
+        occupancyEl.innerText = payload.occupancy;
+        occupancyEl.style.color = payload.occupancy === "occupied" ? "#4caf50" : "#f44336";
+    } else {
+        occupancyEl.innerText = "--";
+        occupancyEl.style.color = "#aaa";
+    }
 
-    luxEl.innerText = payload.lux;
+    if (payload.lux !== undefined && payload.lux !== null) {
+        luxEl.innerText = payload.lux;
+    } else {
+        luxEl.innerText = "--";
+    }
 
     if (!parsed || !parsed.targets) {
         statusText.innerText = "No targetInfo / invalid JSON";
