@@ -12,7 +12,7 @@ from flask_socketio import SocketIO
 # -----------------------------
 # Config via environment vars
 # -----------------------------
-HUBITAT_HOST = os.getenv("HUBITAT_HOST", "192.168.1.50")  # IP or hostname
+HUBITAT_HOST = os.getenv("HUBITAT_HOST", "192.168.1.101")  # IP or hostname
 MAKERAPI_APP_ID = os.getenv("MAKERAPI_APP_ID", "")
 MAKERAPI_TOKEN = os.getenv("MAKERAPI_TOKEN", "")
 POLL_HZ = float(os.getenv("POLL_HZ", "10"))  # 10Hz default
@@ -126,6 +126,8 @@ def poll_loop():
             target_info_raw = attrs.get("targetInfo")
             target_count = attrs.get("targetCount")
 
+            print(f"[poll_loop] polling device {current_device_id} targetInfo={target_info_raw}")
+
             now = time.time()
             changed = target_info_raw != last_targetinfo_raw
 
@@ -184,6 +186,11 @@ def on_change_device(device_id):
 if __name__ == "__main__":
     # Startup: refresh device list once
     refresh_devices()
+    if device_cache:
+        first_device_id = list(device_cache.keys())[0]
+        current_device_id = first_device_id
+        print(f"[startup] defaulting to device {current_device_id}")
+
 
     t = threading.Thread(target=poll_loop, daemon=True)
     t.start()
