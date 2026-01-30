@@ -41,7 +41,7 @@ This GitHub repo already contains everything you need:
 ```bash
 git clone <YOUR_GITHUB_REPO_URL>
 cd <REPO_FOLDER_NAME>
-
+```
 ### 2) Edit .env
 Open the .env file in the repo and update these values:
 HUBITAT_HOST=192.168.1.101
@@ -67,7 +67,7 @@ In your browser:
 http://localhost:5000
 
 
-Docker Desktop GUI (Optional)
+## Docker Desktop GUI (Optional)
 If you prefer using Docker Desktop visually:
 Open Docker Desktop
 Go to Containers
@@ -75,7 +75,7 @@ You should see the running container (ex: hubitat-mmwave-live)
 Click the published port 5000 to open the app
 
 
-Hubitat Maker API Setup
+## Hubitat Maker API Setup
 On Hubitat, install/open the Maker API app
 Select the device(s) you want exposed (your mmWave device must be included)
 Copy:
