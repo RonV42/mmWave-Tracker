@@ -83,6 +83,3 @@ App ID
 Access Token  
 
 Paste them into .env  
-
-You can verify Maker API works by opening this in your browser:  
-http://<hub-ip>/apps/api/<app-id>/devices?access_token=<token>  
