@@ -9,7 +9,7 @@ This project is a lightweight **Flask + Socket.IO** web app that connects to you
 - Real-time plot + target trail history (Plotly)
 - Live target table (X/Y/Z/Doppler)
 
-Runs locally on your network and is easiest to deploy using **Docker Desktop**.
+Runs locally on your network. Deployable using Docker Desktop or Proxmox LXC.
 
 ---
 
@@ -31,7 +31,13 @@ This GitHub repo already contains everything you need:
 ## Requirements
 
 - Docker Desktop installed and running (Windows/macOS/Linux)
+- OR
+- Proxmox LXC
 
+---
+
+## Install / Run (Proxmox LXC
+- See the LXC install guide document included in the package on github
 ---
 
 ## Install / Run (Docker Desktop)
